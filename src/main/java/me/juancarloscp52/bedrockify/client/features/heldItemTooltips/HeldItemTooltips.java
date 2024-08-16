@@ -10,15 +10,17 @@ import me.juancarloscp52.bedrockify.client.features.heldItemTooltips.tooltip.Too
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.item.BundleTooltipData;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.item.*;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -115,7 +117,15 @@ public class HeldItemTooltips {
             }
         } else if(item instanceof BundleItem){
             if(currentStack.getTooltipData().isPresent() && currentStack.isOf(Items.BUNDLE)){
-                generateTooltipsFromContainer(((BundleTooltipData)currentStack.getTooltipData().get()).getInventory(), result);
+                NbtCompound nbt = currentStack.getNbt();
+                if (nbt != null && nbt.contains("Items", 9)){
+                    generateTooltipsFromBundle(nbt, result);
+                }
+            }
+        } else if(currentStack.getTooltipData().isPresent() && currentStack.isOf(Items.ENDER_CHEST)){
+            PlayerEntity player = MinecraftClient.getInstance().player;
+            if (player != null){
+                generateTooltipsFromContainer(player.getEnderChestInventory().stacks, result);
             }
         }
         return result;
@@ -139,6 +149,16 @@ public class HeldItemTooltips {
     private static void generateTooltipsFromShulkerBox(NbtCompound compoundTag, List<Tooltip> instance){
         DefaultedList<ItemStack> items = DefaultedList.ofSize(27, ItemStack.EMPTY);
         Inventories.readNbt(compoundTag, items);
+        generateTooltipsFromContainer(items, instance);
+    }
+
+    private static void generateTooltipsFromBundle(NbtCompound compoundTag, List<Tooltip> instance){
+        DefaultedList<ItemStack> items = DefaultedList.ofSize(27, ItemStack.EMPTY);
+        NbtList nbtList = compoundTag.getList("Items", NbtElement.COMPOUND_TYPE);
+        for (int i = 0; i < nbtList.size(); ++i) {
+            NbtCompound nbtCompound = nbtList.getCompound(i);
+            items.set(i, ItemStack.fromNbt(nbtCompound));
+        }
         generateTooltipsFromContainer(items, instance);
     }
 
